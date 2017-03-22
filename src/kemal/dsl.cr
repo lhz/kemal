@@ -9,12 +9,18 @@ FILTER_METHODS = %w(get post put patch delete options all)
 
 {% for method in HTTP_METHODS %}
   def {{method.id}}(path, &block : HTTP::Server::Context -> _)
+    path = Kemal::Namespace::INSTANCE.namespaced_path(path)
     raise Kemal::Exceptions::InvalidPathStartException.new({{method}}, path) unless Kemal::Utils.path_starts_with_slash?(path)
     Kemal::RouteHandler::INSTANCE.add_route({{method}}.upcase, path, &block)
   end
 {% end %}
 
+def namespace(path, &block)
+  Kemal::Namespace::INSTANCE.with_namespace path, &block
+end
+
 def ws(path, &block : HTTP::WebSocket, HTTP::Server::Context -> Void)
+  path = Kemal::Namespace::INSTANCE.namespaced_path(path)
   raise Kemal::Exceptions::InvalidPathStartException.new("ws", path) unless Kemal::Utils.path_starts_with_slash?(path)
   Kemal::WebSocketHandler.new path, &block
 end
@@ -29,6 +35,7 @@ end
 {% for type in ["before", "after"] %}
   {% for method in FILTER_METHODS %}
     def {{type.id}}_{{method.id}}(path = "*", &block : HTTP::Server::Context -> _)
+     path = Kemal::Namespace::INSTANCE.namespaced_path(path)
      Kemal::FilterHandler::INSTANCE.{{type.id}}({{method}}.upcase, path, &block)
     end
   {% end %}
